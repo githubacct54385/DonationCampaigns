@@ -1,0 +1,20 @@
+<% provide(:title, "Home") %>
+<h1>Support churches all over the world</h1>
+
+<div class="center">
+    <%= link_to "Sign up now!", signup_path, class: "btn btn-lg btn-primary" %>
+</div>
+<div class="container"> 
+	<div class="row topspace-lg">
+		<div class="col-md-12">
+			<% if @campaigns == nil || @campaigns.empty? %>
+				<h2 class="page-header"><i class="fa fa-line-chart purple">
+				</i>No campaigns exist yet</h2>
+			<% else %>
+				<h2 class="page-header"><i class="fa fa-line-chart purple">
+				</i>Popular Campaigns</h2>
+			<% end %>	
+			<%= render 'campaigns' %>
+		</div>
+	</div>
+</div>

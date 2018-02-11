@@ -1,0 +1,15 @@
+<% @charges.each do | charge | %>
+  <div class="row">
+    <div class="col-md-12">
+      <h4>
+        <span class="fa-stack fa-lg">
+          <i class="fa fa-circle fa-stack-2x white"></i>
+          <i class="fa fa-heart fa-stack-1x purple"></i>
+        </span>
+        <span class="raised"><%= number_to_currency(charge.amount) %></span> donated by <%= charge.DonorName %>
+        <small class="pull-right"><%= time_ago_in_words(charge.created_at) %> ago</small>
+      </h4>
+      <hr>
+    </div>
+  </div>
+<% end %>

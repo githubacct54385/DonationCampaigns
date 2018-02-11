@@ -1,0 +1,134 @@
+<% provide(:title, @campaign.name) %>
+<script src="https://js.stripe.com/v3/"></script>
+<div class="container">
+  <div class="row topspace-lg">
+    <div class="col-md-8">
+      <div class="text-center">
+        <%= image_tag @campaign.picture.url if @campaign.picture? %>
+      </div>
+      <h1 class="page-header text-center blue">
+        <%= @campaign.name.titleize %>
+      </h1>
+      <h3 class="goal text-center">
+        <% if @campaign.MoneyRaised %>
+        <span class="raised green"><%= number_to_currency(@campaign.MoneyRaised/100) %></span> raised so far of <strong><%= number_to_currency(@campaign.goal, precision: 0) %> goal</strong>
+        <% else %>
+        <strong><%= number_to_currency(@campaign.goal) %> goal</strong>
+        <% end %>
+      </h3>
+      <blockquote class="lato topspace-lg">
+        <%= simple_format(@campaign.description) %>
+      </blockquote>
+      <h3 class="text-center page-header">Donations</h3>
+      <% unless @campaign.MoneyRaised.to_i > 0 %>
+      This campaign has not received any donations yet.
+      <% else %>
+      <%= render 'donations' %>
+      <% end %>
+    </div>
+    <div class="col-md-4">
+      <%= render 'elements' %>
+      <% if current_user && @campaign.user_id.eql?(current_user.id) && @campaign.IsActive %>
+      <h3 class="page-header text-center"><i class="fa fa-edit purple"></i> Your campaign</h3>
+      <p>
+        <%= link_to "Delete this campaign", campaign_path(@campaign), method: :delete, data: { confirm: "Are you sure you want to delete this campaign?" }, class: "btn btn-lg btn-block btn-custom btn-danger" %>
+      </p>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<script>
+  $(function(){
+    var stripe = Stripe('<%= Rails.configuration.stripe[:publishable_key] %>');
+
+    var elements = stripe.elements();
+
+    // Style the payment element
+    var style = {
+      base: {
+        fontSize: "15px",
+        fontFamily: '"Open Sans", sans-serif',
+        fontSmoothing: 'antialiased',
+        '::placeholder': {
+          color: '#666',
+        },
+      }
+    };
+
+    // Create an instance of the card Element
+    var card = elements.create('card', {style: style});
+
+    // Add an instance of the card Element into the `card-element` <div>
+    card.mount('#card-element');
+
+    // Listen for errors
+    card.addEventListener('change', function(event) {
+      var displayError = document.getElementById('card-errors');
+      if (event.error) {
+        displayError.textContent = event.error.message;
+        displayError.style.display = 'block';
+      } else {
+        displayError.textContent = '';
+        displayError.style.display = 'none';
+      }
+    });
+
+    // Create a token
+    var form = document.getElementById('payment-form');
+    form.addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      // Clear any error styles
+      document.getElementById('amount').parentElement.classList.remove("has-error");
+      document.getElementById('name').parentElement.classList.remove("has-error");
+      document.getElementById('email').parentElement.classList.remove("has-error");
+
+      // Validate the form isn't empty before requesting a token
+      if (document.getElementById('amount').value == '') {
+        document.getElementById('amount').parentElement.classList.add("has-error");
+        return false;
+      } else if (document.getElementById('name').value == '') {
+        document.getElementById('name').parentElement.classList.add("has-error");
+        return false;
+      } else if (document.getElementById('email').value == '') {
+        document.getElementById('email').parentElement.classList.add("has-error");
+        return false;
+      }
+
+      var submit_btn = document.getElementById('submit_payment');
+      var errorElement = document.getElementById('card-errors');
+      submit_btn.innerHTML = "<i class='fa fa-spinner fa-spin'></i> Making donation...";
+      submit_btn.className += " disabled";
+      var cardDetails = {name: form.querySelector('input[name=name]').value};
+      stripe.createToken(card, cardDetails).then(function(result) {
+        if (result.error) {
+          errorElement.textContent = result.error.message;
+          errorElement.style.display = 'block';
+          submit_btn.innerHTML = "Make a donation";
+          submit_btn.classList.remove("disabled");
+        } else {
+          // Reset errors
+          errorElement.textContent = '';
+          errorElement.style.display = 'none';
+          // Send the token to your server
+          stripeTokenHandler(result.token);
+        }
+      });
+    });
+
+    // Submit the token
+    function stripeTokenHandler(token) {
+      // Insert the token ID into the form so it gets submitted to the server
+      var form = document.getElementById('payment-form');
+      var hiddenInput = document.createElement('input');
+      hiddenInput.setAttribute('type', 'hidden');
+      hiddenInput.setAttribute('name', 'stripeToken');
+      hiddenInput.setAttribute('value', token.id);
+      form.appendChild(hiddenInput);
+
+      // Submit the form
+      form.submit();
+    }
+  });
+</script>

@@ -1,0 +1,13 @@
+# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  charge_id: MyString
+  amount: 1
+  campaign_id: 1
+  name: MyString
+
+two:
+  charge_id: MyString
+  amount: 1
+  campaign_id: 1
+  name: MyString

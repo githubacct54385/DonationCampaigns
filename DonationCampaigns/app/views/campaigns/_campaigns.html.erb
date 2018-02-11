@@ -1,0 +1,28 @@
+<% @campaigns.each_slice(3) do | campaigns | %>
+	<div class="row">
+		<% campaigns.each do |campaign| %>
+			<div class="col-md-4">
+        	  <div class="panel panel-default campaign">
+          		<%= link_to campaign_path(campaign) do %>
+          			<div class="panel-body center">
+						<%= image_tag campaign.picture.url if campaign.picture? %>
+						<div class="body-padding">
+							<h4 class="text-center"><%= link_to campaign.name.titleize, campaign_path(campaign) %></a></h4>
+							<p class="goal text-center">
+								<% if campaign.MoneyRaised %>
+									<span class="raised"><%= number_to_currency(campaign.MoneyRaised/100, precision: 0) %></span> raised so far of <strong><%= number_to_currency(campaign.goal, precision: 0) %> goal</strong>
+								<% else %>
+                    				<strong><%= number_to_currency(campaign.goal, precision: 0) %> goal</strong>
+                  				<% end %>
+                			</p>
+                			<p>
+                  				<%= simple_format(truncate(campaign.description, length: 90)) %>
+                			</p>
+						</div>
+          			</div>
+				<% end %>
+          	  </div>
+            </div>
+		<% end %>
+	</div>
+<% end %>

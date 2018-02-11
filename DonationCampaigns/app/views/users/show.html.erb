@@ -1,0 +1,53 @@
+<% provide(:title, @user.name) %>
+<% if @user.StripeRegistered? == false || @user.StripeAcctNumber == nil || @user.StripeAcctNumber == "" %>
+<table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Stripe Account Number</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><%= @user.name %></td>
+        <td><%= @user.email %></td>
+        <td><%= @user.StripeAcctNumber %></td>
+      </tr>
+    </tbody>
+  </table>
+
+<div>
+	<h2>
+		Before you can create campaigns, you need to get registered on Stripe.  Click the Connect with Stripe button to get started!
+	</h2>
+</div>
+<div class="StripeConnectBtn center">
+	<a href="https://connect.stripe.com/oauth/authorize?response_type=code&client_id=ca_CAGNn8d6hAB7L7fKOD9BPRDaqP8q53HA&scope=read_write" class="stripe-connect"><span>Connect with Stripe</span></a>
+</div>
+<% else %>
+<div class="container">
+  <h2>User Info</h2>
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Stripe Account Number</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><%= @user.name %></td>
+		    <td><%= @user.email %></td>
+		    <td><%= @user.StripeAcctNumber %></td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="col-md-12">
+      <h2 class="page-header"><i class="fa fa-line-chart purple">
+      </i>Your Campaigns</h2>
+      <%= render 'campaigns/campaigns' %>
+    </div>
+</div>
+<% end %>
