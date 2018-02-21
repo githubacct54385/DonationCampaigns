@@ -71,9 +71,10 @@ class UsersController < ApplicationController
                             StripeAcctNumber: stripe_acct_num)
     if @user.save
       Rails.logger.info 'Successful edit user now'
-      flash[:success] = 'Congratulations!  \
-      You are all set to create and support campaigns.'
-      redirect_to @user && return
+      successMsg = "Congratulations!  \
+      You are all set to create and support campaigns."
+      flash[:success] = successMsg
+      redirect_to @user and return
     else
       Rails.logger.info 'Failed to edit user now'
       puts @user.errors.full_messages
