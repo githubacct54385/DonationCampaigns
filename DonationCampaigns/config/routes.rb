@@ -7,7 +7,7 @@ Rails.application.routes.draw do
   post   '/charges', to: 'charges#create'
   get    '/signup',  to: 'users#new'
   post   '/signup',  to: 'users#create'
-  get    '/StripeConnected', to: 'users#StripeConnected'
+  get    '/StripeConnected', to: 'users#stripe_connected'
   get    '/login',   to: 'sessions#new'
   post   '/login',   to: 'sessions#create'
   delete '/logout',  to: 'sessions#destroy'

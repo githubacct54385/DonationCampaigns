@@ -1,62 +1,63 @@
+# Handles User actions for creation, stripe account connection
+# and showing Users
 class UsersController < ApplicationController
-	def new
-		@user = User.new
-	end
+  def new
+    @user = User.new
+  end
 
-	def index
-    	@users = User.paginate(page: params[:page])
-  	end
+  def index
+    @users = User.paginate(page: params[:page])
+  end
 
-	def create
-    	@user = User.new(user_params)
-      @user.StripeRegistered = false
-    	if @user.save
-        # Handle a successful save.
-        log_in @user
-    		flash[:success] = "Welcome to the Donations App!"
-    		redirect_to @user	
-    	else
-      		render 'new'
-    	end
-  	end
+  def create
+    @user = User.new(user_params)
+    @user.StripeRegistered = false
+    if @user.save
+      # Handle a successful save.
+      log_in @user
+      flash[:success] = 'Welcome to the Donations App!'
+      redirect_to @user
+    else
+      render 'new'
+    end
+  end
 
-    def StripeConnected
-      puts "Stripe Connected Received..."
+  def stripe_connected
+    Rails.logger.info 'Stripe Connected Received...'
+    # puts 'Stripe Connected Received...'
+    unless logged_in?
+      flash[:danger] = 'Please login again to proceed.'
+      redirect_to root_url && return
+    end
 
-      unless logged_in?
-        flash[:danger] = "Please login again to proceed."  
-        redirect_to root_url and return
-      end
+    params.each do |key, value|
+      puts "Key: #{key}, Value: #{value}"
+    end
 
-      params.each do |key, value|
-        puts "Key: #{key}, Value: #{value}"
-      end
+    puts "Authorization Code: #{params[:code]}"
 
-      #@code = params[:code]
-      puts "Authorization Code: #{params[:code]}"
+    require 'net/http'
+    require 'uri'
 
-      require 'net/http'
-      require 'uri'
-
-      uri = URI.parse("https://connect.stripe.com/oauth/token")
-      request = Net::HTTP::Post.new(uri)
-      request.set_form_data(
+    uri = URI.parse("https://connect.stripe.com/oauth/token")
+    request = Net::HTTP::Post.new(uri)
+    request.set_form_data(
       "client_secret" => "#{Rails.configuration.stripe[:secret_key]}",
       "code" => "#{params[:code]}",
       "grant_type" => "authorization_code",
-      )
+    )
 
-      req_options = {
+    req_options = {
       use_ssl: uri.scheme == "https",
-      }
+    }
 
-      response = Net::HTTP.start(uri.hostname, uri.port, req_options) do |http|
-        http.request(request)
-      end
+    response = Net::HTTP.start(uri.hostname, uri.port, req_options) do |http|
+      http.request(request)
+    end
 
-      puts "Response Body: #{response.body}"
+    puts "Response Body: #{response.body}"
 
-      @user = User.find_by(id: session[:user_id])
+    @user = User.find_by(id: session[:user_id])
       
       stripeAcctNum = JSON.parse(response.body)["stripe_user_id"].to_s
       puts JSON.parse(response.body)
