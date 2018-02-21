@@ -1,3 +1,6 @@
+require 'net/http'
+require 'uri'
+
 # Handles User actions for creation, stripe account connection
 # and showing Users
 class UsersController < ApplicationController
@@ -22,63 +25,91 @@ class UsersController < ApplicationController
     end
   end
 
-  def stripe_connected
+  def login_check
     Rails.logger.info 'Stripe Connected Received...'
-    unless logged_in?
-      flash[:danger] = 'Please login again to proceed.'
-      redirect_to root_url && return
-    end
+    return if logged_in?
+    flash[:danger] = 'Please login again to proceed.'
+    redirect_to root_url && return
+  end
 
+  def print_params(params)
     params.each do |key, value|
       Rails.logger.info "Key: #{key}, Value: #{value}"
     end
-
     Rails.logger.info "Authorization Code: #{params[:code]}"
+  end
 
-    require 'net/http'
-    require 'uri'
+  def create_uri
+    @uri = URI.parse('https://connect.stripe.com/oauth/token')
+  end
 
-    uri = URI.parse('https://connect.stripe.com/oauth/token')
-    request = Net::HTTP::Post.new(uri)
-    request.set_form_data(
+  def create_http_request
+    @request = Net::HTTP::Post.new(@uri)
+    @request.set_form_data(
       'client_secret' => Rails.configuration.stripe[:secret_key].to_s,
       'code' => params[:code].to_s,
       'grant_type' => 'authorization_code'
     )
+  end
 
-    req_options = {
-      use_ssl: uri.scheme == 'https'
+  def create_request_options
+    @req_options = {
+      use_ssl: @uri.scheme == 'https'
     }
+  end
 
-    response = Net::HTTP.start(uri.hostname, uri.port, req_options) do |http|
-      http.request(request)
+  def create_http_response
+    @response = Net::HTTP.start(@uri.hostname,
+                                @uri.port,
+                                @req_options) do |http|
+      http.request(@request)
     end
+    Rails.logger.info "Response Body: #{@response.body}"
+    Rails.logger.info JSON.parse(@response.body)
+  end
 
-    Rails.logger.info "Response Body: #{response.body}"
-
-    @user = User.find_by(id: session[:user_id])
-
-    stripe_acct_num = JSON.parse(response.body)['stripe_user_id'].to_s
-    Rails.logger.info JSON.parse(response.body)
-    Rails.logger.info stripe_acct_num
-    if stripe_acct_num.empty?
-      flash[:danger] = 'Stripe Account Number could not be parsed from JSON'
-      redirect_to @user && return
-    end
-
-    Rails.logger.info "Stripe Account Number: #{stripe_acct_num}"
+  def update_user
     @user.update_attributes(StripeRegistered: true,
-                            StripeAcctNumber: stripe_acct_num)
+                            StripeAcctNumber: @stripe_acct_num)
+  end
+
+  def save_user
     if @user.save
       Rails.logger.info 'Successful edit user now'
-      successMsg = "Congratulations!  \
+      success_msg = "Congratulations!  \
       You are all set to create and support campaigns."
-      flash[:success] = successMsg
-      redirect_to @user and return
+      flash[:success] = success_msg
+      redirect_to @user
     else
-      Rails.logger.info 'Failed to edit user now'
-      puts @user.errors.full_messages
+      Rails.logger.warn 'Failed to edit user now'
+      Rails.logger.warn @user.errors.full_messages
     end
+  end
+
+  def active_user
+    @user = User.find_by(id: session[:user_id])
+  end
+
+  def parse_stripe_acct_number
+    @stripe_acct_num = JSON.parse(@response.body)['stripe_user_id'].to_s
+    Rails.logger.info "Stripe Account Number: #{@stripe_acct_num}"
+
+    return unless @stripe_acct_num.empty?
+    flash[:danger] = 'Stripe Account Number could not be parsed from JSON'
+    redirect_to @user
+  end
+
+  def stripe_connected
+    login_check
+    print_params(params)
+    create_uri
+    create_http_request
+    create_request_options
+    create_http_response
+    active_user
+    parse_stripe_acct_number
+    update_user
+    save_user
   end
 
   def show
