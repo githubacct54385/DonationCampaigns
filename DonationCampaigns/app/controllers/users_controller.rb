@@ -24,77 +24,79 @@ class UsersController < ApplicationController
 
   def stripe_connected
     Rails.logger.info 'Stripe Connected Received...'
-    # puts 'Stripe Connected Received...'
     unless logged_in?
       flash[:danger] = 'Please login again to proceed.'
       redirect_to root_url && return
     end
 
     params.each do |key, value|
-      puts "Key: #{key}, Value: #{value}"
+      Rails.logger.info "Key: #{key}, Value: #{value}"
     end
 
-    puts "Authorization Code: #{params[:code]}"
+    Rails.logger.info "Authorization Code: #{params[:code]}"
 
     require 'net/http'
     require 'uri'
 
-    uri = URI.parse("https://connect.stripe.com/oauth/token")
+    uri = URI.parse('https://connect.stripe.com/oauth/token')
     request = Net::HTTP::Post.new(uri)
     request.set_form_data(
-      "client_secret" => "#{Rails.configuration.stripe[:secret_key]}",
-      "code" => "#{params[:code]}",
-      "grant_type" => "authorization_code",
+      'client_secret' => Rails.configuration.stripe[:secret_key].to_s,
+      'code' => params[:code].to_s,
+      'grant_type' => 'authorization_code'
     )
 
     req_options = {
-      use_ssl: uri.scheme == "https",
+      use_ssl: uri.scheme == 'https'
     }
 
     response = Net::HTTP.start(uri.hostname, uri.port, req_options) do |http|
       http.request(request)
     end
 
-    puts "Response Body: #{response.body}"
+    Rails.logger.info "Response Body: #{response.body}"
 
     @user = User.find_by(id: session[:user_id])
-      
-      stripeAcctNum = JSON.parse(response.body)["stripe_user_id"].to_s
-      puts JSON.parse(response.body)
-      puts stripeAcctNum
-      if stripeAcctNum.empty?
-        flash[:danger] = "Stripe Account Number could not be parsed from JSON"
-        redirect_to @user and return
-      end
 
-      puts "Stripe Account Number: #{stripeAcctNum}"
-      @user.update_attributes(:StripeRegistered => true, :StripeAcctNumber => stripeAcctNum)
-      if @user.save
-        puts "Successful edit user now"
-        flash[:success] = "Congratulations!  You are all set to create and support campaigns."
-        redirect_to @user and return
-      else
-        puts "Failed to edit user now"
-        puts @user.errors.full_messages
-      end
+    stripe_acct_num = JSON.parse(response.body)['stripe_user_id'].to_s
+    Rails.logger.info JSON.parse(response.body)
+    Rails.logger.info stripe_acct_num
+    if stripe_acct_num.empty?
+      flash[:danger] = 'Stripe Account Number could not be parsed from JSON'
+      redirect_to @user && return
     end
 
-  	def show
-      unless User.exists?(:id => params[:id])
-        flash[:danger] = "The user you specified does not exist."
-        redirect_back(fallback_location: root_path) and return
-      end
+    Rails.logger.info "Stripe Account Number: #{stripe_acct_num}"
+    @user.update_attributes(StripeRegistered: true,
+                            StripeAcctNumber: stripe_acct_num)
+    if @user.save
+      Rails.logger.info 'Successful edit user now'
+      flash[:success] = 'Congratulations!  \
+      You are all set to create and support campaigns.'
+      redirect_to @user && return
+    else
+      Rails.logger.info 'Failed to edit user now'
+      puts @user.errors.full_messages
+    end
+  end
 
-      # get the campaigns that this user has created
-      @campaigns = Campaign.where(user_id: params[:id])
+  def show
+    unless User.exists?(id: params[:id])
+      flash[:danger] = 'The user you specified does not exist.'
+      redirect_back(fallback_location: root_path) && return
+    end
 
-    	@user = User.find(params[:id])
-      puts @user.inspect
-  	end
+    # get the campaigns that this user has created
+    @campaigns = Campaign.where(user_id: params[:id])
+
+    @user = User.find(params[:id])
+    Rails.logger.info @user.inspect
+  end
+
   private
 
-    def user_params
-      params.require(:user).permit(:name, :email, :password,
-                                   :password_confirmation)
-    end
+  def user_params
+    params.require(:user).permit(:name, :email, :password,
+                                 :password_confirmation)
+  end
 end
